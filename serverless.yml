@@ -18,7 +18,7 @@ provider:
     # git (CI/CD) supplied
     API_VER: ${env:API_VER}
 
-function:
+functions:
   app:
     handler: src/serverless.handler
     events:
