@@ -1,0 +1,54 @@
+name: Serverless deployment - dev stage
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'dev-*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Node.js version
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12
+
+      - name: Set Python version
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+          architecture: 'x64'
+
+      - uses: actions/checkout@v2
+
+      # "global" dependencies/CLIs for deployment automation
+      - run: npm install -g serverless @eqworks/notify
+      # TODO: drop --pre once print-env (portunus) gets stable
+      - run: python -m pip install print-env --pre
+
+      - run: yarn install
+
+      - run: echo "PORTUNUS_TOKEN=$PORTUNUS_TOKEN" > .env && yarn deploy --stage dev
+        env:
+          # aws creds for deployment
+          AWS_ACCESS_KEY_ID: ${{ secrets.aws_access_key_id }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.aws_secret_access_key }}
+          # stage specific PORTUNUS_TOKEN
+          PORTUNUS_TOKEN: ${{ secrets.PORTUNUS_TOKEN_JWT }}/12/dev
+          # git commit SHA as API_VER
+          API_VER: ${{ github.sha }}
+
+      - name: Notify on deployment success
+        if: success()
+        run: notify deployment $GITHUB_REPOSITORY --commit=$GITHUB_SHA --stage=dev
+        env:
+          SLACK_HOOK: ${{ secrets.SLACK_HOOK }}
+
+      - name: Notify on deployment failure
+        if: failure()
+        run: notify deployment $GITHUB_REPOSITORY --commit=$GITHUB_SHA --stage=dev --success=false
+        env:
+          SLACK_HOOK: ${{ secrets.SLACK_HOOK }}
