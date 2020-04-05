@@ -30,3 +30,14 @@ functions:
           path: /{proxy+}
           method: ANY
           cors: true
+
+plugins:
+  - serverless-domain-manager
+
+custom:
+  customDomain:
+    domainName: api.flaat.io
+    basePath: '${opt:stage, self:provider.stage}'
+    stage: '${opt:stage, self:provider.stage}'
+    certificateName: '*.flaat.io'
+    createRoute53Record: true
