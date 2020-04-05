@@ -8,7 +8,7 @@ const register = require('./routes/register')
 const db = new Pool(config.db)
 const app = express()
 app.use(express.json())
-app.use(express.urlencoded())
+app.use(express.urlencoded({ extended: true }))
 
 app.use('/register', register(db))
 
