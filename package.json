@@ -2,7 +2,7 @@
   "name": "flaat-api",
   "private": true,
   "scripts": {
-    "start": "nodemon src/index.js",
+    "start": "env $(print-env) nodemon src/index.js",
     "lint": "eslint -c .eslintrc.js --ext .js ./src/.",
     "lint:fix": "eslint -c .eslintrc.js --ext .js ./src/. --fix",
     "lint:nowarn": "eslint -c .eslintrc.js --ext .js ./src/. --quiet",
