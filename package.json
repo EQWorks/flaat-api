@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "start": "env $(print-env) nodemon src/index.js",
+    "deploy": "env $(print-env) sls deploy",
     "lint": "eslint -c .eslintrc.js --ext .js ./src/.",
     "lint:fix": "eslint -c .eslintrc.js --ext .js ./src/. --fix",
     "lint:nowarn": "eslint -c .eslintrc.js --ext .js ./src/. --quiet",
@@ -13,7 +14,8 @@
   },
   "dependencies": {
     "express": "^4.17.1",
-    "pg": "^8.0.0"
+    "pg": "^8.0.0",
+    "serverless-http": "^2.3.2"
   },
   "devDependencies": {
     "eslint": "^4.19.1",

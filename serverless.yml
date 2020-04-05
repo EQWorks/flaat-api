@@ -1,0 +1,32 @@
+service: flaat-api
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: us-east-1
+  timeout: 29
+  memorySize: 256
+  environment:
+    # configured through PORTUNUS_TOKEN enabled print-env
+    DB_HOST: ${env:DB_HOST}
+    DB_PORT: ${env:DB_PORT}
+    DB_USER: ${env:DB_USER}
+    DB_PW: ${env:DB_PW}
+    DB_NAME: ${env:DB_NAME}
+    # serverless supplied
+    STAGE: ${opt:stage, self:provider.stage}
+    # git (CI/CD) supplied
+    API_VER: ${env:API_VER}
+
+function:
+  app:
+    handler: src/serverless.handler
+    events:
+      - http:
+          path: /
+          method: ANY
+          cors: true
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors: true
