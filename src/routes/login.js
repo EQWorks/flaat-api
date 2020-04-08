@@ -14,7 +14,7 @@ module.exports = (db) => {
     // TODO: get a proper private key
     // TODO: rewire api_access when HA side of things are clear
     const privateKey = 'theUltimatePrivateKey'
-    const token = jwt.sign({ user: device_id, api_access: { isHA: false } }, privateKey)
+    const token = jwt.sign({ device_id, api_access: { isHA: false } }, privateKey)
 
     // timestamp every login
     const loginRecorded = await db.query(
