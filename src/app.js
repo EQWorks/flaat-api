@@ -3,7 +3,7 @@ const config = require('../config')
 const { Pool } = require('pg')
 
 const login = require('./routes/login')
-const checkAuth = require('./routes/test-checkAuth')
+const cenReport = require('./routes/cen_report')
 
 
 const db = new Pool(config.db)
@@ -12,6 +12,6 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 app.use('/login', login(db))
-app.use('/checkAuth', checkAuth())
+app.use('/cenreport', cenReport(db))
 
 module.exports = app

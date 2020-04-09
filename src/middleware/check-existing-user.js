@@ -1,5 +1,6 @@
 module.exports = db => async (req, res, next) => {
   const { device_id } = req.body
+  if (!device_id) res.status(400).send('Missing Fields.')
   // check users table if user exists
   const existingUser = await db.query(
     `
