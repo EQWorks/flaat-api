@@ -12,6 +12,6 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 app.use('/login', login(db))
-app.use('/cenreport', cenReport(db))
+app.use(['/tcnreport', '/cenreport'], cenReport(db))
 
 module.exports = app
