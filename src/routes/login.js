@@ -1,12 +1,12 @@
 const express = require('express')
 const jwt = require('jsonwebtoken')
+const { hasBodyParams } = require('../middleware/validation')
 const checkExistingUser = require('../middleware/check-existing-user')
-const errorHandler = require('../middleware/error-handler')
 
 
 const router = express.Router()
 module.exports = (db) => {
-  router.post('/', checkExistingUser(db), errorHandler, async (req, res) => {
+  router.post('/', hasBodyParams('device_id'), checkExistingUser(db), async (req, res) => {
     const { device_id } = req.body
     const { user_id } = req
 

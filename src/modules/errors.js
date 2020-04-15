@@ -1,20 +1,14 @@
-function APIError(msg) {
+function ErrorHandler(statusCode, msg, err) {
+  this.statusCode = statusCode
   this.message = msg
-  this.status = 500
-  Error.captureStackTrace(this, APIError)
-}
-// APIError.prototype = Object.create(Error.prototype)
-
-function ValidationError(msg) {
-  this.message = msg
-  this.status = 400
-  Error.captureStackTrace(this, ValidationError)
+  this.error = err
+  Error.captureStackTrace(this, ErrorHandler)
 }
 
-function AuthError(msg) {
-  this.message = msg
-  this.status = 403
-  Error.captureStackTrace(this, AuthError)
+const catchAllError = (err, res) => {
+  const { statusCode, message, error } = err
+  console.error(error || message)
+  res.status(statusCode || 500).json({ statusCode, message })
 }
 
-module.exports = { APIError, ValidationError, AuthError }
+module.exports = { ErrorHandler, catchAllError }
