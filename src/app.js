@@ -4,6 +4,7 @@ const { Pool } = require('pg')
 
 const login = require('./routes/login')
 const cenReport = require('./routes/cen_report')
+const version = require('./routes/version')
 const { catchAllError } = require('./modules/errors')
 
 
@@ -14,6 +15,7 @@ app.use(express.urlencoded({ extended: true }))
 
 app.use('/login', login(db))
 app.use(['/tcnreport', '/cenreport'], cenReport(db))
+app.use('/version', version())
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
