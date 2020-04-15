@@ -4,10 +4,9 @@ const { ErrorHandler } = require('../modules/errors')
 
 module.exports = db => async (req, res, next) => {
   const { validationPin, traces } = req.body
-  const { report, reportId, cenKeys } = req._cen
+  const { report, cenKeys } = req._cen
   const { device_id } = jwt.decode(req.flaat_jwt)
-  // let trace_id // APPROACH-1
-  let traceListId // APPROACH-2
+  let traceListId
   let verified
 
   const client = await db.connect()
@@ -26,36 +25,6 @@ module.exports = db => async (req, res, next) => {
         [validationPin],
       ).then(r => r.rows[0].exists)
     }
-
-    // // APPROACH-1: dump everything under one column
-    // if (traces && traces.length > 0) {
-    //   trace_id = await client.query(
-    //     `
-    //       INSERT INTO traces(user_id, trace_history) VALUES (
-    //         (SELECT id FROM users WHERE device_id = $1),
-    //         $2)
-    //       RETURNING *
-    //     `,
-    //     [device_id, traces],
-    //   )
-    //     .then(r => r.rows[0].id)
-    //     .catch(err => (
-    //       next(new APIError(`Unsuccessful upload: failed to store trace history. ${err.message}`))
-    //     ))
-    // }
-
-    // // APPROACH-1
-    // client.query(
-    //   `
-    //     INSERT INTO reports(verified, report, report_id, cen_keys, trace_id)
-    //     VALUES ($1, $2, $3, $4, $5) RETURNING *
-    //   `,
-    //   [verified, report, reportId, cenKeys, trace_id],
-    // )
-    //   .then(r => r)
-    //   .catch(err => (
-    //     next(new APIError(`Unsuccessful upload: failed to save report. ${err.message}`))
-    //   ))
 
     // APPROACH-2: create a list table and instance each item in list
     if (traces && traces.length > 0) {
@@ -79,13 +48,12 @@ module.exports = db => async (req, res, next) => {
       )))
     }
 
-    // APPROACH-2
     await client.query(
       `
-        INSERT INTO reports(verified, report, report_id, cen_keys, trace_list_id)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO reports(verified, report, cen_keys, trace_list_id)
+        VALUES ($1, $2, $3, $4)
       `,
-      [verified, report, reportId, cenKeys, traceListId],
+      [verified, report, cenKeys, traceListId],
     )
 
     await client.query('COMMIT')
