@@ -1,5 +1,9 @@
+const { ErrorHandler } = require('../modules/errors')
+
+
 module.exports = db => async (req, _, next) => {
   const { device_id } = req.body
+  const { access_id } = req
   let userId
 
   // check users table if user exists
@@ -10,15 +14,19 @@ module.exports = db => async (req, _, next) => {
     [device_id],
   ).then(r => r.rows[0]).catch(next)
 
-  if (existingUser && existingUser.id) {
-    userId = existingUser.id
+  if (existingUser) {
+    if (existingUser.api_access_id === access_id) {
+      userId = existingUser.id
+    } else {
+      return next(new ErrorHandler(403, 'Invalid Access.'))
+    }
   } else {
     // create new user
     userId = await db.query(
       `
-        INSERT INTO users(device_id) VALUES ($1) RETURNING *
+        INSERT INTO users(device_id, api_access_id) VALUES ($1, $2) RETURNING *
       `,
-      [device_id],
+      [device_id, access_id],
     ).then(r => r.rows[0].id).catch(next)
   }
 
