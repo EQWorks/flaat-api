@@ -12,7 +12,7 @@ module.exports = (db) => {
     hasBodyParams('device_id', 'app_name', 'access_key'),
     validateAccess(db),
     checkExistingUser(db),
-    async (req, res) => {
+    (req, res) => {
       const { device_id } = req.body
       const { user_id } = req
 
@@ -22,14 +22,14 @@ module.exports = (db) => {
       // TODO: checkin with Eugene on mobile app logout for ttl
 
       // timestamp every login
-      const loginRecorded = await db.query(
+      db.query(
         `
-          INSERT INTO login(user_id) VALUES ($1) RETURNING *
+          INSERT INTO login(user_id) VALUES ($1)
         `,
         [user_id],
-      ).then(r => r.rows[0]).catch(err => res.status(500).json({ message: err.message }))
-
-      if (loginRecorded) res.status(200).json({ token })
+      )
+        .then(() => res.status(200).json({ token }))
+        .catch(err => res.status(500).json({ message: err.message }))
     },
   )
   return router
