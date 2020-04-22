@@ -31,7 +31,6 @@ module.exports = db => async (req, _, next) => {
       if (id) userId = id
     }
 
-    console.log('userId', userId)
     req.user_id = userId
     next()
   } catch (err) {
