@@ -8,29 +8,30 @@ module.exports = db => async (req, _, next) => {
 
   try {
     // check users table if user exists
-    const { rows: [{ id, api_access_id }] } = await db.query(
+    const { rows } = await db.query(
       `
         SELECT * FROM users WHERE device_id = $1
       `,
       [device_id],
     )
 
-    if (id && api_access_id) {
-      if (api_access_id !== access_id) {
+    if (rows.length > 0 && rows[0].id && rows[0].api_access_id) {
+      if (rows[0].api_access_id !== access_id) {
         return next(new ErrorHandler(403, 'Invalid Access.'))
       }
-      userId = id
+      userId = rows[0].id
     } else {
       // create new user
-      const { rows: [{ id: newUserId }] } = await db.query(
+      const { rows: [{ id }] } = await db.query(
         `
           INSERT INTO users(device_id, api_access_id) VALUES ($1, $2) RETURNING *
         `,
         [device_id, access_id],
       )
-      if (newUserId) userId = newUserId
+      if (id) userId = id
     }
 
+    console.log('userId', userId)
     req.user_id = userId
     next()
   } catch (err) {
