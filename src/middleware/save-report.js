@@ -17,25 +17,27 @@ module.exports = db => async (req, res, next) => {
     if (!validationPin) {
       verified = false
     } else {
-      verified = await client.query(
+      const { rows: [{ exists }] } = await client.query(
         `
           SELECT 
             EXISTS (SELECT pin FROM static_pins WHERE pin = $1)
         `,
         [validationPin],
-      ).then(r => r.rows[0].exists)
+      )
+      verified = exists
     }
 
     // APPROACH-2: create a list table and instance each item in list
     if (traces && traces.length > 0) {
-      traceListId = await client.query(
+      const { rows: [{ id }] } = await client.query(
         `
           INSERT INTO trace_list(user_id)
             SELECT id FROM users WHERE device_id = $1
           RETURNING *
         `,
         [device_id],
-      ).then(r => r.rows[0].id)
+      )
+      if (id) traceListId = id
 
       await Promise.all(traces.map(trace => (
         client.query(
