@@ -4,7 +4,7 @@ const { ErrorHandler } = require('../modules/errors')
 
 module.exports = db => async (req, res, next) => {
   const { validationPin, traces } = req.body
-  const { report, cenKeys } = req._cen
+  const { report } = req._cen
   const { device_id } = jwt.decode(req.flaat_jwt)
   let traceListId
   let verified
@@ -52,10 +52,10 @@ module.exports = db => async (req, res, next) => {
 
     await client.query(
       `
-        INSERT INTO reports(verified, report, cen_keys, trace_list_id)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO reports(verified, report, trace_list_id)
+        VALUES ($1, $2, $3)
       `,
-      [verified, report, cenKeys, traceListId],
+      [verified, report, traceListId],
     )
 
     await client.query('COMMIT')
