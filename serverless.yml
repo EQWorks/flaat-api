@@ -6,6 +6,7 @@ provider:
   region: us-east-1
   timeout: 29
   memorySize: 256
+  stage: ${opt:stage, 'dev'}
   environment:
     # configured through PORTUNUS_TOKEN enabled print-env
     DB_HOST: ${env:DB_HOST}
@@ -13,8 +14,9 @@ provider:
     DB_USER: ${env:DB_USER}
     DB_PW: ${env:DB_PW}
     DB_NAME: ${env:DB_NAME}
+    PGAPPNAME: ${self:service}-${self:provider.stage}
     # serverless supplied
-    STAGE: ${opt:stage, self:provider.stage}
+    STAGE: ${self:provider.stage}
     # git (CI/CD) supplied
     API_VER: ${env:API_VER}
 
@@ -37,7 +39,7 @@ plugins:
 custom:
   customDomain:
     domainName: api.flaat.io
-    basePath: '${opt:stage, self:provider.stage}'
-    stage: '${opt:stage, self:provider.stage}'
+    basePath: '${self:provider.stage}'
+    stage: '${self:provider.stage}'
     certificateName: '*.flaat.io'
     createRoute53Record: true
