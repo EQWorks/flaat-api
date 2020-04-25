@@ -43,7 +43,7 @@ module.exports = db => async (req, res, next) => {
         client.query(
           `
             INSERT INTO traces(geohash, start_time, end_time, trace_list_id)
-            VALUES ($1, $2, $3, $4)
+            VALUES ($1, to_timestamp($2), to_timestamp($3), $4)
           `,
           [trace.geohash, trace.start, trace.end, traceListId],
         )
