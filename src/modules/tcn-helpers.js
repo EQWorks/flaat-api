@@ -35,9 +35,9 @@ const checkReportLength = (buffer) => {
  * @returns {boolean} true if the check passes
  */
 const checkReportIndexes = (buffer) => {
-  const indexJ1 = buffer.readUInt16LE(64)
-  const indexJ2 = buffer.readUInt16LE(66)
-  if (indexJ1 < 1 || indexJ1 > indexJ2) {
+  const startIndex = buffer.readUInt16LE(64)
+  const endIndex = buffer.readUInt16LE(66)
+  if (startIndex < 1 || startIndex > endIndex) {
     throw Error('Invalid indexes in report.')
   }
   return true
@@ -59,9 +59,6 @@ const checkReportSignature = (buffer) => {
     format: 'der',
     type: 'spki',
   })
-  if (key.asymmetricKeyType !== 'ed25519') {
-    throw Error('Report must be signed with an ed25519 key.')
-  }
 
   const report = buffer.slice(0, -64)
   // Signature - trailing 64 bytes
