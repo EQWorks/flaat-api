@@ -10,6 +10,6 @@ const getReports = require('../middleware/get-reports')
 const router = express.Router()
 module.exports = (db) => {
   router.post('/', jwtAuth, postReportReq, postReport, validateTCNReport, saveReport(db))
-  router.get('/', jwtAuth, hasQueryParams('verified', 'locations'), getReports(db))
+  router.get('/', jwtAuth, hasQueryParams('verified'), getReports(db))
   return router
 }

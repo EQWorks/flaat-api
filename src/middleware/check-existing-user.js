@@ -1,39 +1,65 @@
-const { ErrorHandler } = require('../modules/errors')
-
-
 module.exports = db => async (req, _, next) => {
   const { device_id } = req.body
   const { access_id } = req
   let userId
 
+  const client = await db.connect()
   try {
-    // check users table if user exists
-    const { rows } = await db.query(
-      `
-        SELECT * FROM users WHERE device_id = $1
-      `,
-      [device_id],
-    )
+    await client.query('BEGIN')
 
-    if (rows.length > 0 && rows[0].id && rows[0].api_access_id) {
-      if (rows[0].api_access_id !== access_id) {
-        return next(new ErrorHandler(403, 'Invalid Access.'))
+    const { rows } = await client.query({
+      text: `
+        SELECT 
+          u.id AS user_id, 
+          json_agg(l.api_access_id) AS user_api_access
+        FROM users u
+        JOIN user_access_list l
+          ON u.id = l.user_id
+        WHERE u.device_id = $1
+        GROUP BY u.id
+      `,
+      values: [device_id],
+    })
+
+    // if user exists
+    if (rows.length > 0) {
+      const { user_id, user_api_access } = rows[0]
+      // TODO: check other credentials if user_api_access array is empty
+      if (user_api_access.length > 0 && !user_api_access.includes(access_id)) {
+        await client.query(
+          `
+            INSERT INTO user_access_list(user_id, api_access_id) VALUES ($1, $2)
+          `,
+          [user_id, access_id],
+        )
       }
-      userId = rows[0].id
+      userId = user_id
     } else {
-      // create new user
-      const { rows: [{ id }] } = await db.query(
+      // create new user & user_access_list
+      const { rows: [{ id }] } = await client.query(
         `
-          INSERT INTO users(device_id, api_access_id) VALUES ($1, $2) RETURNING *
+          INSERT INTO users(device_id) VALUES ($1) RETURNING *
         `,
-        [device_id, access_id],
+        [device_id],
       )
-      if (id) userId = id
+
+      const { rows: newAccess } = await client.query(
+        `
+          INSERT INTO user_access_list(user_id, api_access_id) VALUES ($1, $2) RETURNING *
+        `,
+        [id, access_id],
+      )
+
+      if (newAccess.length > 0) userId = newAccess[0].user_id
     }
 
+    await client.query('COMMIT')
     req.user_id = userId
     next()
   } catch (err) {
+    if (client) await client.query('ROLLBACK')
     return next(err)
+  } finally {
+    if (client) client.release()
   }
 }

@@ -4,7 +4,8 @@ const { ErrorHandler } = require('../modules/errors')
 
 module.exports = db => async (req, res, next) => {
   const { validationPin, traces } = req.body
-  const { report } = req._cen
+  const report = req._tcn
+  const signature = req._tcnSignature
   const { device_id } = jwt.decode(req.flaat_jwt)
   let traceListId
   let verified
@@ -43,7 +44,7 @@ module.exports = db => async (req, res, next) => {
         client.query(
           `
             INSERT INTO traces(geohash, start_time, end_time, trace_list_id)
-            VALUES ($1, $2, $3, $4)
+            VALUES ($1, to_timestamp($2), to_timestamp($3), $4)
           `,
           [trace.geohash, trace.start, trace.end, traceListId],
         )
@@ -52,10 +53,10 @@ module.exports = db => async (req, res, next) => {
 
     await client.query(
       `
-        INSERT INTO reports(verified, report, trace_list_id)
-        VALUES ($1, $2, $3)
+        INSERT INTO reports(verified, report, signature, trace_list_id)
+        VALUES ($1, $2, $3, $4)
       `,
-      [verified, report, traceListId],
+      [verified, report, signature, traceListId],
     )
 
     await client.query('COMMIT')
