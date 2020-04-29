@@ -4,7 +4,7 @@ const { Pool } = require('pg')
 
 const registerApp = require('./routes/app-register')
 const login = require('./routes/login')
-const cenReport = require('./routes/cen-report')
+const { CENReport, TCNReport } = require('./routes/tcn-report')
 const version = require('./routes/version')
 const { catchAllError } = require('./modules/errors')
 
@@ -15,7 +15,8 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 app.use('/login', login(db))
-app.use(['/tcnreport', '/cenreport'], cenReport(db))
+app.use('/tcnreport', TCNReport(db))
+app.use('/cenreport', CENReport)
 app.use('/version', version())
 
 // likely don't need this endpoint, will manually onboard new apps for now
