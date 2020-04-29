@@ -3,7 +3,7 @@ const moment = require('moment')
 
 module.exports = db => async (req, res, next) => {
   // ASSUME: always verification
-  const { verified, fromDate, locations } = req.query
+  const { verified, fromDate, locations, fullReport } = req.query
   const selectFromDate = moment.unix(fromDate).format()
   let locationArr = []
   let reports
@@ -15,7 +15,7 @@ module.exports = db => async (req, res, next) => {
       if (fromDate) {
         const { rows: reportsInTimeRange } = await db.query({
           text: `
-            SELECT report FROM reports
+            SELECT report, signature FROM reports
             WHERE verified = $1
               AND reported_at::date >= $2
           `,
@@ -26,7 +26,7 @@ module.exports = db => async (req, res, next) => {
       } else {
         const { rows: allReports } = await db.query({
           text: `
-            SELECT report FROM reports WHERE verified = $1
+            SELECT report, signature FROM reports WHERE verified = $1
           `,
           values: [verified],
           rowMode: 'array',
@@ -38,7 +38,7 @@ module.exports = db => async (req, res, next) => {
         reports = await Promise.all(locationArr.map(async (location) => {
           const { rows } = await db.query({
             text: `
-              SELECT r.report
+              SELECT r.report, r.signature
               FROM reports r
               WHERE r.reported_at::date >= $1
                 AND r.verified = $2
@@ -58,7 +58,7 @@ module.exports = db => async (req, res, next) => {
         reports = await Promise.all(locationArr.map(async (location) => {
           const { rows } = await db.query({
             text: `
-              SELECT r.report
+              SELECT r.report, r.signature
               FROM reports r
               WHERE r.verified = $1
                 AND (r.trace_list_id IS NULL OR EXISTS(
@@ -76,7 +76,14 @@ module.exports = db => async (req, res, next) => {
       }
     }
 
-    const uniqueReports = new Set(reports.flat(2))
+    const uniqueReports = new Set(reports.flat().map((r) => {
+      if (fullReport) {
+        const reportBuffer = Buffer.from(r[0], 'base64')
+        const signatureBuffer = Buffer.from(r[1], 'base64')
+        return Buffer.concat([reportBuffer, signatureBuffer]).toString('base64')
+      }
+      return r[0]
+    }))
 
     res.json({ reports: [...uniqueReports] })
   } catch (err) {
