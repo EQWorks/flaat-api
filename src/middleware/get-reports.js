@@ -1,16 +1,22 @@
 module.exports = db => async (req, res, next) => {
   try {
     // Must sanitize all input first (see sanitize-get-reports middleware fn)
-    const { verified, fromDate, locations, fullReport } = req.query
+    const { verified, fromDate, toDate, locations, fullReport } = req.query
 
-    // Init where clause with verified
-    const whereText = ['r.verified = $1']
-    const whereValues = [verified]
+    // Init where clause
+    const whereText = []
+    const whereValues = []
+
+    // Add verified filter if true
+    if (verified) {
+      whereText.push(`r.verified = $${whereValues.length + 1}`)
+      whereValues.push(verified)
+    }
 
     // Add locations to where clause if provided
     if (locations.length) {
       const geoFilter = locations
-        .map((_, i) => `t.geohash LIKE $${i + 1 + whereValues.length} || '%'`)
+        .map((_, i) => `t.geohash LIKE $${i + whereValues.length + 1} || '%'`)
         .join(' OR ')
 
       whereText.push(`(
@@ -23,10 +29,16 @@ module.exports = db => async (req, res, next) => {
       whereValues.push(...locations)
     }
 
-    // Add date to where clause if provided
+    // Add fromDate to where clause if provided
     if (fromDate !== '1970-01-01T00:00:00Z') {
       whereText.push(`r.reported_at::date >= $${whereValues.length + 1}`)
       whereValues.push(fromDate)
+    }
+
+    // Add toDate to where clause if provided
+    if (toDate !== '1970-01-01T00:00:00Z') {
+      whereText.push(`r.reported_at::date <= $${whereValues.length + 1}`)
+      whereValues.push(toDate)
     }
 
     const { rows: queryReports } = await db.query({
