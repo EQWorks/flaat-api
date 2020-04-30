@@ -1,5 +1,5 @@
 const h = require('../modules/helpers')
-const { ErrorHandler } = require('../modules/errors')
+const { APIError } = require('../modules/errors')
 
 
 module.exports = db => async (req, _, next) => {
@@ -14,7 +14,7 @@ module.exports = db => async (req, _, next) => {
     )
 
     if (rows.length === 0 || !h.compareHash(access_key, rows[0].access_key)) {
-      return next(new ErrorHandler(403, 'Invalid access.'))
+      return next(new APIError(403, 'Invalid access.'))
     }
 
     req.access_id = rows[0].id

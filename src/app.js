@@ -6,7 +6,7 @@ const registerApp = require('./routes/app-register')
 const login = require('./routes/login')
 const { CENReport, TCNReport } = require('./routes/tcn-report')
 const version = require('./routes/version')
-const { catchAllError } = require('./modules/errors')
+const { ErrorHandler } = require('./modules/errors')
 
 
 const db = new Pool(config.db)
@@ -22,9 +22,6 @@ app.use('/version', version())
 // likely don't need this endpoint, will manually onboard new apps for now
 app.use('/register', registerApp(db))
 
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  catchAllError(err, res)
-})
+app.use(ErrorHandler)
 
 module.exports = app

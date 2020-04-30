@@ -1,10 +1,10 @@
-const express = require('express')
+const { Router } = require('express')
 const { hasBodyParams } = require('../middleware/validation')
 const h = require('../modules/helpers')
 
 
-const router = express.Router()
 module.exports = (db) => {
+  const router = Router()
   const accessKey = h.randomString()
   const hashAccessKey = h.hash(accessKey)
 

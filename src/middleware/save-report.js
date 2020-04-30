@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken')
-const { ErrorHandler } = require('../modules/errors')
+const { APIError } = require('../modules/errors')
 
 
 module.exports = db => async (req, res, next) => {
@@ -32,7 +32,7 @@ module.exports = db => async (req, res, next) => {
     if (traces && traces.length > 0) {
       const { rows: [{ id }] } = await client.query(
         `
-          INSERT INTO trace_list(user_id)
+          INSERT INTO trace_list (user_id)
             SELECT id FROM users WHERE device_id = $1
           RETURNING *
         `,
@@ -40,20 +40,26 @@ module.exports = db => async (req, res, next) => {
       )
       if (id) traceListId = id
 
-      await Promise.all(traces.map(trace => (
-        client.query(
-          `
-            INSERT INTO traces(geohash, start_time, end_time, trace_list_id)
-            VALUES ($1, to_timestamp($2), to_timestamp($3), $4)
-          `,
-          [trace.geohash, trace.start, trace.end, traceListId],
-        )
-      )))
+      const insertText = traces
+        // eslint-disable-next-line max-len
+        .map((_, i) => `($${(i * 4) + 1}, to_timestamp($${(i * 4) + 2}), to_timestamp($${(i * 4) + 3}), $${(i * 4) + 4})`)
+        .join(', ')
+      const insertValues = traces
+        // eslint-disable-next-line max-len
+        .reduce((values, { geohash, start, end }) => values.push(geohash, start, end, traceListId) && values, [])
+
+      await client.query(
+        `
+          INSERT INTO traces (geohash, start_time, end_time, trace_list_id)
+          VALUES ${insertText}
+        `,
+        insertValues,
+      )
     }
 
     await client.query(
       `
-        INSERT INTO reports(verified, report, signature, trace_list_id)
+        INSERT INTO reports (verified, report, signature, trace_list_id)
         VALUES ($1, $2, $3, $4)
       `,
       [verified, report, signature, traceListId],
@@ -62,13 +68,9 @@ module.exports = db => async (req, res, next) => {
     await client.query('COMMIT')
     res.send('Successful upload.')
   } catch (err) {
-    if (client) {
-      await client.query('ROLLBACK')
-    }
-    next(new ErrorHandler(500, err.message, err))
+    await client.query('ROLLBACK')
+    next(new APIError(500, err.message, err))
   } finally {
-    if (client) {
-      client.release()
-    }
+    client.release()
   }
 }

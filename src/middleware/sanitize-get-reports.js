@@ -1,4 +1,6 @@
-const moment = require('moment')
+const DEFAULT_IN_VERIFIED = 'true' // only respond with verified reports
+const DEFAULT_IN_FULL_REPORT = 'false' // do not send signature
+const COEPI_INTERVAL_LENGTH_S = 6 * 3600 // 6 hours
 
 /**
  * Parses json string to array of strings
@@ -31,33 +33,21 @@ const sanitizeStringArray = (rawArray) => {
 }
 
 /**
- * Parses string/number to Unix timestamp
- * @param {string|number} [rawDate] Seconds since Unix Epoch (UTC)
- * @returns {string} UTC timestamp in format if parseable, '1970-01-01T00:00:00Z' otherwise
- */
-const sanitizeUnixTS = (rawDate) => {
-  if (!rawDate) return '1970-01-01T00:00:00Z'
-  const parsedDate = moment.unix(rawDate).utc().format()
-  return parsedDate === 'Invalid date' ? '1970-01-01T00:00:00Z' : parsedDate
-}
-
-/**
- * Parses date string to Unix timestamp
+ * Parses date string to Unix time
  * @param {string|number} [rawDate] Date formatted as 'YYY-MM-DD'
- * @returns {string} UTC timestamp in format if parseable, '1970-01-01T00:00:00Z' otherwise
+ * @returns {number} Unix time, 0 if not parseable
  */
 const sanitizeDate = (rawDate) => {
-  if (!rawDate) return '1970-01-01T00:00:00Z'
-  const parsedDate = moment(rawDate, 'YYYY-MM-DD').utc().format()
-  return parsedDate === 'Invalid date' ? '1970-01-01T00:00:00Z' : parsedDate
+  if (!rawDate || !(/^\d{4}-\d{2}-\d{2}$/).test(rawDate)) return 0
+  return Math.floor(Date.parse(rawDate) / 1000)
 }
 
 /**
  * Parses string to boolean
  * @param {string} [rawBoolean]
- * @returns {boolean} true for truthy values (save for string 'false'), false otherwise
+ * @returns {boolean} true is passed string 'true', false otherwise
  */
-const sanitizeBoolean = rawBoolean => rawBoolean !== 'false' && Boolean(rawBoolean)
+const sanitizeBoolean = rawBoolean => rawBoolean === 'true'
 
 /**
  * Parses string to integer
@@ -75,24 +65,22 @@ const sanitizeUInt = (rawInt) => {
  * Parses CoEpi query parameters
  * @param {string} [date]
  * @param {string} [intervalNumber]
- * @param {string} [intervalLengthMs]
- * @returns {([string, string]|[string, undefined])} [fromDate, toDate] with 24 hours separating
- * both dates, ['1970-01-01T00:00:00Z', '1970-01-01T00:00:00Z'] if not parseable
+ * @returns {[number, number]} [fromDate, toDate] as unix time
+ * with COEPI_INTERVAL_LENGTH_S (when intervalNumber can be coerced into a valid positive
+ * integer) or 24 hours separating both times, [0, 0] if not parseable
  */
-const sanitizeCoEpiQuery = (date, intervalNumber, intervalLengthMs) => {
+const sanitizeCoEpi = (date, intervalNumber) => {
   const safeIntervalNumber = sanitizeUInt(intervalNumber)
-  const safeIntervalLengthMs = sanitizeUInt(intervalLengthMs)
   let fromDate
   let toDate
 
-  if (safeIntervalNumber && safeIntervalLengthMs) {
-    fromDate = sanitizeUnixTS((safeIntervalNumber - 1) * safeIntervalLengthMs / 1000)
-    toDate = sanitizeUnixTS(safeIntervalNumber * safeIntervalLengthMs / 1000)
+  // interval imput supersedes date as more precise
+  if (safeIntervalNumber) {
+    fromDate = (safeIntervalNumber - 1) * COEPI_INTERVAL_LENGTH_S
+    toDate = safeIntervalNumber * COEPI_INTERVAL_LENGTH_S
   } else {
     fromDate = sanitizeDate(date)
-    toDate = fromDate === '1970-01-01T00:00:00Z'
-      ? fromDate
-      : moment(fromDate).add(1, 'd').utc().format()
+    toDate = fromDate && fromDate + (3600 * 24)
   }
 
   return [fromDate, toDate]
@@ -100,21 +88,27 @@ const sanitizeCoEpiQuery = (date, intervalNumber, intervalLengthMs) => {
 
 module.exports = (req, _, next) => {
   const {
-    verified = 'true', fromDate, toDate, locations, fullReport = 'false',
-    date, intervalNumber, intervalLengthMs, // CoEpi
+    verified = DEFAULT_IN_VERIFIED,
+    fromDate,
+    toDate,
+    locations,
+    fullReport = DEFAULT_IN_FULL_REPORT,
+    date, // CoEpi
+    intervalNumber, // CoEpi
   } = req.query
 
-  req.query.verified = sanitizeBoolean(verified) // default: true
-  req.query.fullReport = sanitizeBoolean(fullReport) // default: false
-  req.query.fromDate = sanitizeUnixTS(fromDate)
-  req.query.toDate = sanitizeUnixTS(toDate)
+  req.query.verified = sanitizeBoolean(verified)
+  req.query.fullReport = sanitizeBoolean(fullReport)
+  req.query.fromDate = sanitizeUInt(fromDate)
+  req.query.toDate = sanitizeUInt(toDate)
   req.query.locations = sanitizeStringArray(locations)
 
   // CoEpi params - for interoperability
+  // Used as fallback if fromDate not provided
   // https://github.com/Co-Epi/coepi-backend-aws/blob/master/api_definition/coepi_api_0.4.0.yml
-  if (req.query.fromDate === '1970-01-01T00:00:00Z') {
+  if (!req.query.fromDate) {
     [req.query.fromDate, req.query.toDate] =
-      sanitizeCoEpiQuery(date, intervalNumber, intervalLengthMs)
+      sanitizeCoEpi(date, intervalNumber)
   }
   next()
 }
