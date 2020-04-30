@@ -7,10 +7,12 @@ const RVKHeader = Buffer.from('MCowBQYDK2VwAyEA', 'base64')
  * Checks report length
  * Throws an error if the check fails, returns a boolean otherwise
  * @param {Buffer} buffer Report as a buffer
+ * @param {boolean} [requireSignature=true] Function will throw an error
+ * when passed an unsigned report (instead of returning false)
  * @returns {boolean} true if the report is signed, false otherwise
  */
-const checkReportLength = (buffer) => {
-  if (buffer.length < 70) {
+const checkReportLength = (buffer, requireSignature = true) => {
+  if (buffer.length < 70 || (requireSignature && buffer.length < 134)) {
     throw Error('Report is too short.')
   }
 
@@ -19,7 +21,7 @@ const checkReportLength = (buffer) => {
 
   // unsigned report
   if (buffer.length !== 134 + memoLen) {
-    if (buffer.length !== 70 + memoLen) {
+    if (buffer.length !== 70 + memoLen || requireSignature) {
       throw Error('Report length is invalid.')
     }
     return false
@@ -70,31 +72,7 @@ const checkReportSignature = (buffer) => {
   return true
 }
 
-/**
- * Performs integrity checks
- * Throws an error if a check fails, returns a boolean otherwise
- * @param {string} report Report encoded as a base64 string
- * @returns {boolean} true if the report is signed, false otherwise
- */
-const checkReportIntegrity = (report) => {
-  // report max length: 389 bytes
-  if (report.length > 389 * 8 / 6) {
-    throw Error('Report is too long.')
-  }
-
-  const buffer = Buffer.from(report, 'base64')
-  const isSigned = checkReportLength(buffer)
-  checkReportIndexes(buffer)
-  if (isSigned) {
-    checkReportSignature(buffer)
-    return true
-  }
-
-  return false
-}
-
 module.exports = {
-  checkReportIntegrity,
   checkReportIndexes,
   checkReportLength,
   checkReportSignature,
