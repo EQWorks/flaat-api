@@ -1,91 +1,53 @@
-const moment = require('moment')
-
-
 module.exports = db => async (req, res, next) => {
-  // ASSUME: always verification
-  const { verified, fromDate, locations, fullReport } = req.query
-  const selectFromDate = moment.unix(fromDate).format()
-  let locationArr = []
-  let reports
-
   try {
-    if (locations) locationArr = JSON.parse(locations)
+    // Must sanitize all input first (see sanitize-get-reports middleware fn)
+    const { verified, fromDate, locations, fullReport } = req.query
 
-    if (!locations || locationArr.length === 0 || !locationArr[0]) {
-      if (fromDate) {
-        const { rows: reportsInTimeRange } = await db.query({
-          text: `
-            SELECT report, signature FROM reports
-            WHERE verified = $1
-              AND reported_at::date >= $2
-          `,
-          values: [verified, selectFromDate],
-          rowMode: 'array',
-        })
-        reports = reportsInTimeRange
-      } else {
-        const { rows: allReports } = await db.query({
-          text: `
-            SELECT report, signature FROM reports WHERE verified = $1
-          `,
-          values: [verified],
-          rowMode: 'array',
-        })
-        reports = allReports
-      }
-    } else if (locations && locationArr.length > 0 && locationArr[0]) {
-      if (fromDate) {
-        reports = await Promise.all(locationArr.map(async (location) => {
-          const { rows } = await db.query({
-            text: `
-              SELECT r.report, r.signature
-              FROM reports r
-              WHERE r.reported_at::date >= $1
-                AND r.verified = $2
-                AND (r.trace_list_id IS NULL OR EXISTS(
-                  SELECT * FROM traces t
-                  WHERE t.trace_list_id = r.trace_list_id
-                    AND t.geohash LIKE $3 || '%'
-                  )
-                )
-            `,
-            values: [selectFromDate, verified, location],
-            rowMode: 'array',
-          })
-          return rows
-        }))
-      } else {
-        reports = await Promise.all(locationArr.map(async (location) => {
-          const { rows } = await db.query({
-            text: `
-              SELECT r.report, r.signature
-              FROM reports r
-              WHERE r.verified = $1
-                AND (r.trace_list_id IS NULL OR EXISTS(
-                  SELECT * FROM traces t
-                  WHERE t.trace_list_id = r.trace_list_id
-                    AND t.geohash LIKE $2 || '%'
-                  )
-                )
-            `,
-            values: [verified, location],
-            rowMode: 'array',
-          })
-          return rows
-        }))
-      }
+    // Init where clause with verified
+    const whereText = ['r.verified = $1']
+    const whereValues = [verified]
+
+    // Add locations to where clause if provided
+    if (locations.length) {
+      const geoFilter = locations
+        .map((_, i) => `t.geohash LIKE $${i + 1 + whereValues.length} || '%'`)
+        .join(' OR ')
+
+      whereText.push(`(
+        r.trace_list_id IS NULL OR EXISTS(
+          SELECT * FROM traces t
+          WHERE t.trace_list_id = r.trace_list_id
+          AND (${geoFilter})
+        )
+      )`)
+      whereValues.push(...locations)
     }
 
-    const uniqueReports = new Set(reports.flat().map((r) => {
+    // Add date to where clause if provided
+    if (fromDate !== '1970-01-01T00:00:00Z') {
+      whereText.push(`r.reported_at::date >= $${whereValues.length + 1}`)
+      whereValues.push(fromDate)
+    }
+
+    const { rows: queryReports } = await db.query({
+      text: `
+        SELECT DISTINCT r.report, r.signature FROM reports r
+        WHERE ${whereText.join(' AND ')}
+      `,
+      values: whereValues,
+      rowMode: 'array',
+    })
+
+    const reports = queryReports.map(([report, signature]) => {
       if (fullReport) {
-        const reportBuffer = Buffer.from(r[0], 'base64')
-        const signatureBuffer = Buffer.from(r[1], 'base64')
+        const reportBuffer = Buffer.from(report, 'base64')
+        const signatureBuffer = Buffer.from(signature, 'base64')
         return Buffer.concat([reportBuffer, signatureBuffer]).toString('base64')
       }
-      return r[0]
-    }))
+      return report
+    })
 
-    res.json({ reports: [...uniqueReports] })
+    res.json({ reports })
   } catch (err) {
     return next(err)
   }
