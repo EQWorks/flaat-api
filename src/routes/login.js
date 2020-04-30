@@ -16,15 +16,13 @@ module.exports = (db) => {
       const { device_id } = req.body
       const { user_id } = req
 
-      // TODO: get a proper private key
-      const privateKey = 'theUltimatePrivateKey'
-      const token = jwt.sign({ device_id }, privateKey, { expiresIn: '30d' })
+      const token = jwt.sign({ device_id }, process.env.AUTH_PRIVATE_KEY, { expiresIn: '30d' })
       // TODO: checkin with Eugene on mobile app logout for ttl
 
       // timestamp every login
       db.query(
         `
-          INSERT INTO login(user_id) VALUES ($1)
+          INSERT INTO login (user_id) VALUES ($1)
         `,
         [user_id],
       )

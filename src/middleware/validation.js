@@ -1,10 +1,10 @@
-const { ErrorHandler } = require('../modules/errors')
+const { APIError } = require('../modules/errors')
 
 
 const _hasParams = target => (...params) => (req, _, next) => {
   for (const param of params) {
-    if (!req[target][param]) {
-      return next(new ErrorHandler(400, `Missing '${param}' in ${target}.`))
+    if (!(param in req[target])) {
+      return next(new APIError(400, `Missing '${param}' in ${target}.`))
     }
   }
   return next()

@@ -30,21 +30,21 @@ module.exports = db => async (req, res, next) => {
     }
 
     // Add fromDate to where clause if provided
-    if (fromDate !== '1970-01-01T00:00:00Z') {
-      whereText.push(`r.reported_at::date >= $${whereValues.length + 1}`)
+    if (fromDate) {
+      whereText.push(`r.reported_at >= to_timestamp($${whereValues.length + 1})`)
       whereValues.push(fromDate)
     }
 
     // Add toDate to where clause if provided
-    if (toDate !== '1970-01-01T00:00:00Z') {
-      whereText.push(`r.reported_at::date <= $${whereValues.length + 1}`)
+    if (toDate) {
+      whereText.push(`r.reported_at <= to_timestamp($${whereValues.length + 1})`)
       whereValues.push(toDate)
     }
 
     const { rows: queryReports } = await db.query({
       text: `
         SELECT DISTINCT r.report, r.signature FROM reports r
-        WHERE ${whereText.join(' AND ')}
+        ${whereText.length ? `WHERE ${whereText.join(' AND ')}` : ''}
       `,
       values: whereValues,
       rowMode: 'array',

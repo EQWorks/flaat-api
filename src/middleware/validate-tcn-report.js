@@ -3,14 +3,14 @@ const {
   checkReportIndexes,
   checkReportSignature,
 } = require('../modules/tcn-helpers')
-const { ErrorHandler } = require('../modules/errors')
+const { APIError } = require('../modules/errors')
 
 
 const appendTCNReport = (req, res, next) => {
   // application/json
   if (req.is('json')) {
     if (!req.body.report) {
-      return next(new ErrorHandler(400, 'Missing \'report\' field in json payload.'))
+      return next(new APIError(400, 'Missing \'report\' field in json payload.'))
     }
     req._tcn = req.body.report
     return next()
@@ -23,7 +23,7 @@ const appendTCNReport = (req, res, next) => {
   }
 
   // else error
-  next(new ErrorHandler(400, 'Payload must be of type application/json or text/plain.'))
+  next(new APIError(400, 'Payload must be of type application/json or text/plain.'))
 }
 
 const validateTCNReport = (req, _, next) => {
@@ -42,7 +42,7 @@ const validateTCNReport = (req, _, next) => {
     req._tcn = buffer.slice(0, -64).toString('base64')
     req._tcnSignature = buffer.slice(-64).toString('base64')
   } catch (err) {
-    return next(new ErrorHandler(400, 'Invalid report submission.'))
+    return next(new APIError(400, 'Invalid report submission.'))
   }
   next()
 }
