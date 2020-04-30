@@ -13,7 +13,7 @@ const sanitizeStringArray = (rawArray) => {
     if (!Array.isArray(parsedArray)) return []
 
     // remove padding, empty strings and non-strings
-    const trimmedValue = parsedArray.reduce((trimmedValues, value) => {
+    const trimmedValues = parsedArray.reduce((trimmedValues, value) => {
       if (typeof value === 'string') {
         const trimmedValue = value.trim()
         if (trimmedValue) {
@@ -24,7 +24,7 @@ const sanitizeStringArray = (rawArray) => {
     }, [])
 
     // remove duplicates
-    return [...new Set(trimmedValue)]
+    return [...new Set(trimmedValues)]
   } catch (_) {
     return []
   }

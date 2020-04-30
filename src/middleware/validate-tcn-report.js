@@ -7,16 +7,23 @@ const { ErrorHandler } = require('../modules/errors')
 
 
 const appendTCNReport = (req, res, next) => {
-  // check if application/json or just text
+  // application/json
   if (req.is('json')) {
     if (!req.body.report) {
-      return next(new ErrorHandler(400, 'Missing \'report\' field in json payload'))
+      return next(new ErrorHandler(400, 'Missing \'report\' field in json payload.'))
     }
     req._tcn = req.body.report
     return next()
   }
-  req._tcn = req.body
-  return next()
+
+  // text/plain
+  if (req.is('text/plain')) {
+    req._tcn = req.body
+    return next()
+  }
+
+  // else error
+  next(new ErrorHandler(400, 'Payload must be of type application/json or text/plain.'))
 }
 
 const validateTCNReport = (req, _, next) => {
