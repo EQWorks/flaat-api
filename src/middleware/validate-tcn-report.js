@@ -1,9 +1,21 @@
+const { text } = require('express')
 const {
   checkReportLength,
   checkReportIndexes,
   checkReportSignature,
 } = require('../modules/tcn-helpers')
 const { APIError } = require('../modules/errors')
+
+
+// Max 389 bytes (report || signature)
+const MAX_PAYLOAD_LENGTH_B64 = Math.ceil(389 / 3) * 4
+
+// middleware fn to parse plain text submissions (base 64 encoded)
+const parseTextBody = text({
+  defaultCharset: 'iso-8859-1',
+  limit: MAX_PAYLOAD_LENGTH_B64,
+  type: 'text/plain',
+})
 
 
 const appendTCNReport = (req, res, next) => {
@@ -29,7 +41,7 @@ const appendTCNReport = (req, res, next) => {
 const validateTCNReport = (req, _, next) => {
   try {
     // report max length: 389 bytes
-    if (req._tcn.length > 389 * 8 / 6) {
+    if (req._tcn.length > MAX_PAYLOAD_LENGTH_B64) {
       throw Error('Report is too long.')
     }
 
@@ -48,6 +60,7 @@ const validateTCNReport = (req, _, next) => {
 }
 
 module.exports = {
+  parseTextBody,
   appendTCNReport,
   validateTCNReport,
 }

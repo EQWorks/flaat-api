@@ -1,16 +1,17 @@
-const { Router, text } = require('express')
+const { Router } = require('express')
 const jwtAuth = require('../middleware/auth')
-const { appendTCNReport, validateTCNReport } = require('../middleware/validate-tcn-report')
+const {
+  parseTextBody,
+  appendTCNReport,
+  validateTCNReport,
+} = require('../middleware/validate-tcn-report')
 const saveReport = require('../middleware/save-report')
 const sanitizeGetInput = require('../middleware/sanitize-get-reports')
 const getReports = require('../middleware/get-reports')
 
 
-// middleware fn to parse plain text submissions (base 64 encoded)
-const parseTextBody = text({ defaultCharset: 'iso-8859-1', limit: 389, type: 'text/plain' })
-
 module.exports = {
-  CENReport(req, res) {
+  CENReport(_, res) {
     res.status(400).send('CEN protocol not supported, please use TCN instead (/tcnreport).')
   },
   TCNReport(db) {
