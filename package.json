@@ -1,6 +1,9 @@
 {
   "name": "flaat-api",
   "private": true,
+  "license": "MIT",
+  "homepage": "https://whitepaper.flaat.io",
+  "repository": "github:EQWorks/flaat-api",
   "scripts": {
     "start": "env $(print-env) nodemon src/index.js",
     "deploy": "env $(print-env) sls deploy",
@@ -18,7 +21,6 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "jsonwebtoken": "^8.5.1",
-    "moment": "^2.24.0",
     "pg": "^8.0.0",
     "serverless-http": "^2.3.2"
   },
