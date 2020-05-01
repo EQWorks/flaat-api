@@ -6,6 +6,7 @@ provider:
   region: us-east-1
   timeout: 29
   memorySize: 256
+  # serverless supplied
   stage: ${opt:stage, 'dev'}
   environment:
     # configured through PORTUNUS_TOKEN enabled print-env
@@ -15,7 +16,9 @@ provider:
     DB_PW: ${env:DB_PW}
     DB_NAME: ${env:DB_NAME}
     PGAPPNAME: ${self:service}-${self:provider.stage}
-    # serverless supplied
+    AUTH_PRIVATE_KEY: ${env:AUTH_PRIVATE_KEY}
+    APP_VERSION_IOS: ${env:APP_VERSION_IOS}
+    APP_VERSION_ANDROID: ${env:APP_VERSION_ANDROID}
     STAGE: ${self:provider.stage}
     # git (CI/CD) supplied
     API_VER: ${env:API_VER}
