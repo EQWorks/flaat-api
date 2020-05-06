@@ -14,18 +14,20 @@ module.exports = db => async (req, res, next) => {
   try {
     await client.query('BEGIN')
 
-    // TODO: check existing report (maybe?) OR check one-time validation pin
     if (!validationPin) {
       verified = false
     } else {
-      const { rows: [{ exists }] } = await client.query(
+      const { rowCount } = await client.query(
         `
-          SELECT 
-            EXISTS (SELECT pin FROM static_pins WHERE pin = $1)
+          DELETE FROM static_pins WHERE pin = $1
         `,
         [validationPin],
       )
-      verified = exists
+      if (rowCount) {
+        verified = true
+      } else {
+        return next(new APIError(400, 'Invalid validation pin.'))
+      }
     }
 
     // APPROACH-2: create a list table and instance each item in list
